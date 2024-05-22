@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,15 +10,51 @@
         body {
             padding-top: 50px;
         }
+
         .container {
             max-width: 500px;
         }
+
         .tuner-buttons button {
             width: 100%;
             margin: 5px 0;
         }
+
+        .beat-indicator {
+            width: 20px;
+            height: 20px;
+            /* background-color: red; */
+            background-color: chocolate;
+            border-radius: 50%;
+            position: relative;
+            animation: moveIndicator linear infinite;
+            margin-bottom: 10px;
+        }
+
+        @keyframes moveIndicator {
+            0% {
+                left: 0;
+            }
+
+            25% {
+                left: 50%;
+            }
+
+            50% {
+                left: 100%;
+            }
+
+            75% {
+                left: 50%;
+            }
+
+            100% {
+                left: 0;
+            }
+        }
     </style>
 </head>
+
 <body>
     <div class="container text-center">
         <h1>Violin Metronome and Tuner</h1>
@@ -36,6 +73,7 @@
                     <option value="6/8">6/8</option>
                 </select>
             </div>
+            <div class="beat-indicator"></div>
             <button id="startMetronome" class="btn btn-primary">Start Metronome</button>
             <button id="stopMetronome" class="btn btn-danger">Stop Metronome</button>
         </div>
@@ -64,62 +102,65 @@
 
         // Metronome functionality
         let metronome;
+        let isPlaying = false;
         document.getElementById('startMetronome').addEventListener('click', async () => {
-            await Tone.start();
-            const bpm = parseInt(document.getElementById('bpm').value);
-            const timeSignature = document.getElementById('timeSignature').value;
-            if (bpm >= 40 && bpm <= 208) {
-                if (metronome) {
-                    metronome.stop();
+            if (!isPlaying) {
+                await Tone.start();
+                const bpm = parseInt(document.getElementById('bpm').value);
+                const timeSignature = document.getElementById('timeSignature').value;
+                if (bpm >= 40 && bpm <= 208) {
+                    if (metronome) {
+                        metronome.stop();
+                    }
+
+                    // Synths for leading and other beats
+                    const mySynth = new Tone.FMSynth({
+                        modulationIndex: 12.22,
+                        envelope: {
+                            attack: 0.001,
+                            decay: 0.2,
+                            sustain: 0,
+                            release: 0.2
+                        },
+                        modulation: {
+                            type: "square"
+                        },
+                        modulationEnvelope: {
+                            attack: 0.002,
+                            decay: 0.2,
+                            sustain: 0
+                        }
+                    }).toDestination();
+
+                    let beatCount = 0;
+                    const getMaxBeats = (signature) => {
+                        switch (signature) {
+                            case "2/4": return 2;
+                            case "3/4": return 3;
+                            case "4/4": return 4;
+                            case "6/8": return 6;
+                            default: return 0;
+                        }
+                    };
+
+                    const maxBeats = getMaxBeats(timeSignature);
+                    metronome = new Tone.Loop(time => {
+                        if (maxBeats === 0) {
+                            mySynth.triggerAttackRelease("C5", "8n", time);
+                        } else if (beatCount % maxBeats === 0) {
+                            mySynth.triggerAttackRelease("A5", "8n", time);
+                        } else {
+                            mySynth.triggerAttackRelease("C5", "8n", time);
+                        }
+                        beatCount++;
+                        document.querySelector('.beat-indicator').style.animationDuration = `${120 / bpm}s`;
+                    }, `${60 / bpm}`).start(0);
+
+                    Tone.Transport.start();
+                    isPlaying = true;
+                } else {
+                    alert("Please enter a BPM between 40 and 208.");
                 }
-
-                // Synths for leading and other beats
-                //const leadSynth = new Tone.AMSynth().toDestination();
-                const mySynth = new Tone.FMSynth({
-                    modulationIndex: 12.22,
-                    envelope: {
-                        attack: 0.001,
-                        decay: 0.2,
-                        sustain: 0,
-                        release: 0.2
-                    },
-                    modulation: {
-                        type: "square"
-                    },
-                    modulationEnvelope: {
-                        attack: 0.002,
-                        decay: 0.2,
-                        sustain: 0
-                    }
-                }).toDestination();
-
-                let beatCount = 0;
-                const getMaxBeats = (signature) => {
-                    switch (signature) {
-                        case "2/4": return 2;
-                        case "3/4": return 3;
-                        case "4/4": return 4;
-                        case "6/8": return 6;
-                        default: return 0;
-                    }
-                };
-
-                const maxBeats = getMaxBeats(timeSignature);
-                metronome = new Tone.Loop(time => {
-                    if (maxBeats === 0) {
-                        mySynth.triggerAttackRelease("C5", "8n", time);
-                    } else if (beatCount % maxBeats === 0) {
-                        //leadSynth.triggerAttackRelease("A4", "20n", time);
-                        mySynth.triggerAttackRelease("A5", "8n", time);
-                    } else {
-                        mySynth.triggerAttackRelease("C5", "8n", time);
-                    }
-                    beatCount++;
-                }, `${60 / bpm}`).start(0);
-                
-                Tone.Transport.start();
-            } else {
-                alert("Please enter a BPM between 40 and 208.");
             }
         });
 
@@ -128,7 +169,13 @@
                 metronome.stop();
             }
             Tone.Transport.stop();
+            isPlaying = false;
+            // Reset beat indicator
+            const indicator = document.querySelector('.beat-indicator');
+            indicator.style.animation = 'none'; // Stop animation
+            setTimeout(() => { indicator.style.animation = 'moveIndicator linear infinite'; }, 0); // Reset animation
         });
+
 
         // Tuner functionality
         const synth = new Tone.Synth().toDestination();
@@ -153,4 +200,5 @@
         });
     </script>
 </body>
+
 </html>
