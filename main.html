@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Violin Metronome and Tuner</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 50px;
+        }
+        .container {
+            max-width: 500px;
+        }
+        .tuner-buttons button {
+            width: 100%;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container text-center">
+        <h1>Violin Metronome and Tuner</h1>
+        <hr>
+        <div class="metronome">
+            <h2>Metronome</h2>
+            <div class="form-group">
+                <input type="number" id="bpm" class="form-control" placeholder="Enter BPM" min="40" max="208">
+            </div>
+            <div class="form-group">
+                <select id="timeSignature" class="form-control">
+                    <option value="0">No Time Signature</option>
+                    <option value="2/4">2/4</option>
+                    <option value="3/4">3/4</option>
+                    <option value="4/4">4/4</option>
+                    <option value="6/8">6/8</option>
+                </select>
+            </div>
+            <button id="startMetronome" class="btn btn-primary">Start Metronome</button>
+            <button id="stopMetronome" class="btn btn-danger">Stop Metronome</button>
+        </div>
+        <hr>
+        <div class="tuner">
+            <h2>Tuner</h2>
+            <div class="tuner-buttons">
+                <button id="toggleG" class="btn btn-secondary">Toggle G</button>
+                <button id="toggleD" class="btn btn-secondary">Toggle D</button>
+                <button id="toggleA" class="btn btn-secondary">Toggle A</button>
+                <button id="toggleE" class="btn btn-secondary">Toggle E</button>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.25/Tone.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // Ensure Tone.js context is started
+        document.addEventListener('click', () => {
+            if (Tone.context.state !== 'running') {
+                Tone.context.resume();
+            }
+        }, { once: true });
+
+        // Metronome functionality
+        let metronome;
+        document.getElementById('startMetronome').addEventListener('click', async () => {
+            await Tone.start();
+            const bpm = parseInt(document.getElementById('bpm').value);
+            const timeSignature = document.getElementById('timeSignature').value;
+            if (bpm >= 40 && bpm <= 208) {
+                if (metronome) {
+                    metronome.stop();
+                }
+
+                // Synths for leading and other beats
+                //const leadSynth = new Tone.AMSynth().toDestination();
+                const mySynth = new Tone.FMSynth({
+                    modulationIndex: 12.22,
+                    envelope: {
+                        attack: 0.001,
+                        decay: 0.2,
+                        sustain: 0,
+                        release: 0.2
+                    },
+                    modulation: {
+                        type: "square"
+                    },
+                    modulationEnvelope: {
+                        attack: 0.002,
+                        decay: 0.2,
+                        sustain: 0
+                    }
+                }).toDestination();
+
+                let beatCount = 0;
+                const getMaxBeats = (signature) => {
+                    switch (signature) {
+                        case "2/4": return 2;
+                        case "3/4": return 3;
+                        case "4/4": return 4;
+                        case "6/8": return 6;
+                        default: return 0;
+                    }
+                };
+
+                const maxBeats = getMaxBeats(timeSignature);
+                metronome = new Tone.Loop(time => {
+                    if (maxBeats === 0) {
+                        mySynth.triggerAttackRelease("C5", "8n", time);
+                    } else if (beatCount % maxBeats === 0) {
+                        //leadSynth.triggerAttackRelease("A4", "20n", time);
+                        mySynth.triggerAttackRelease("A5", "8n", time);
+                    } else {
+                        mySynth.triggerAttackRelease("C5", "8n", time);
+                    }
+                    beatCount++;
+                }, `${60 / bpm}`).start(0);
+                
+                Tone.Transport.start();
+            } else {
+                alert("Please enter a BPM between 40 and 208.");
+            }
+        });
+
+        document.getElementById('stopMetronome').addEventListener('click', () => {
+            if (metronome) {
+                metronome.stop();
+            }
+            Tone.Transport.stop();
+        });
+
+        // Tuner functionality
+        const synth = new Tone.Synth().toDestination();
+        const notes = {
+            toggleG: "G3",
+            toggleD: "D4",
+            toggleA: "A4",
+            toggleE: "E5"
+        };
+        const activeNotes = {};
+
+        Object.keys(notes).forEach(id => {
+            document.getElementById(id).addEventListener('click', () => {
+                if (activeNotes[id]) {
+                    synth.triggerRelease();
+                    activeNotes[id] = false;
+                } else {
+                    synth.triggerAttack(notes[id]);
+                    activeNotes[id] = true;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
