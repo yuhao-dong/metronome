@@ -9,48 +9,108 @@
     <style>
         body {
             padding-top: 50px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Arial', sans-serif;
+            color: #333;
         }
 
         .container {
             max-width: 500px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        h1, h2 {
+            font-family: 'Georgia', serif;
+            color: #444;
+        }
+
+        hr {
+            border: 1px solid #ddd;
+        }
+
+        .form-control {
+            border-radius: 30px;
+            padding: 10px;
+        }
+
+        .btn {
+            border-radius: 30px;
+            padding: 10px 20px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #42a5f5, #478ed1);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(45deg, #478ed1, #42a5f5);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ef5350, #d32f2f);
+            border: none;
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(45deg, #d32f2f, #ef5350);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #7e57c2, #5e35b1);
+            border: none;
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(45deg, #5e35b1, #7e57c2);
         }
 
         .tuner-buttons button {
-            width: 100%;
-            margin: 5px 0;
+            margin: 10px 0;
         }
 
         .beat-indicator {
-            width: 20px;
-            height: 20px;
-            /* background-color: red; */
+            width: 30px;
+            height: 30px;
             background-color: chocolate;
             border-radius: 50%;
             position: relative;
             animation: moveIndicator linear infinite;
-            margin-bottom: 10px;
+            margin: 20px auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
 
         @keyframes moveIndicator {
             0% {
-                left: 0;
+                left: -50%;
             }
 
             25% {
-                left: 50%;
+                left: 0%;
             }
 
             50% {
-                left: 100%;
-            }
-
-            75% {
                 left: 50%;
             }
 
-            100% {
-                left: 0;
+            75% {
+                left: 0%;
             }
+
+            100% {
+                left: -50%;
+            }
+        }
+
+        .footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #777;
         }
     </style>
 </head>
@@ -62,7 +122,7 @@
         <div class="metronome">
             <h2>Metronome</h2>
             <div class="form-group">
-                <input type="number" id="bpm" class="form-control" placeholder="Enter BPM" min="40" max="208">
+                <input type="number" id="bpm" class="form-control" placeholder="Enter BPM" min="40" max="208" value="80">
             </div>
             <div class="form-group">
                 <select id="timeSignature" class="form-control">
@@ -81,11 +141,14 @@
         <div class="tuner">
             <h2>Tuner</h2>
             <div class="tuner-buttons">
-                <button id="toggleG" class="btn btn-secondary">Toggle G</button>
-                <button id="toggleD" class="btn btn-secondary">Toggle D</button>
-                <button id="toggleA" class="btn btn-secondary">Toggle A</button>
-                <button id="toggleE" class="btn btn-secondary">Toggle E</button>
+                <button id="toggleG" class="btn btn-secondary">G String</button>
+                <button id="toggleD" class="btn btn-secondary">D String</button>
+                <button id="toggleA" class="btn btn-secondary">A String</button>
+                <button id="toggleE" class="btn btn-secondary">E String</button>
             </div>
+        </div>
+        <div class="footer">
+            <p>&copy; 2024 Violin Metronome and Tuner. All rights reserved.</p>
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.25/Tone.min.js"></script>
@@ -103,6 +166,7 @@
         // Metronome functionality
         let metronome;
         let isPlaying = false;
+
         document.getElementById('startMetronome').addEventListener('click', async () => {
             if (!isPlaying) {
                 await Tone.start();
@@ -144,6 +208,15 @@
                     };
 
                     const maxBeats = getMaxBeats(timeSignature);
+
+                    // Reset animation
+                    const indicator = document.querySelector('.beat-indicator');
+                    indicator.style.animation = 'none'; // Stop animation
+                    setTimeout(() => {
+                        indicator.style.animation = 'moveIndicator linear infinite';
+                        indicator.style.animationDuration = `${120 / bpm}s`; // Reset animation duration
+                    }, 0);
+
                     metronome = new Tone.Loop(time => {
                         if (maxBeats === 0) {
                             mySynth.triggerAttackRelease("C5", "8n", time);
@@ -153,7 +226,6 @@
                             mySynth.triggerAttackRelease("C5", "8n", time);
                         }
                         beatCount++;
-                        document.querySelector('.beat-indicator').style.animationDuration = `${120 / bpm}s`;
                     }, `${60 / bpm}`).start(0);
 
                     Tone.Transport.start();
@@ -170,12 +242,14 @@
             }
             Tone.Transport.stop();
             isPlaying = false;
+
             // Reset beat indicator
             const indicator = document.querySelector('.beat-indicator');
             indicator.style.animation = 'none'; // Stop animation
-            setTimeout(() => { indicator.style.animation = 'moveIndicator linear infinite'; }, 0); // Reset animation
+            setTimeout(() => {
+                indicator.style.animation = 'moveIndicator linear infinite';
+            }, 0); // Reset animation
         });
-
 
         // Tuner functionality
         const synth = new Tone.Synth().toDestination();
